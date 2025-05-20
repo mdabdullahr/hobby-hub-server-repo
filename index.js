@@ -25,6 +25,11 @@ async function run() {
     await client.connect();
     const groupCollection = client.db("groupDB").collection("groups");
 
+    app.get("/groups", async(req, res) => {
+      const result = await groupCollection.find().toArray();
+      res.send(result);
+    })
+
     app.post("/groups", async(req, res) => {
       const group = req.body;
       const result = await groupCollection.insertOne(group);
