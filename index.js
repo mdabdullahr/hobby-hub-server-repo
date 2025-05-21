@@ -25,12 +25,12 @@ async function run() {
     const groupCollection = client.db("groupDB").collection("groups");
 
     app.get("/groups", async (req, res) => {
-      const {emailParams} = req.query;
+      const { emailParams } = req.query;
       console.log(emailParams);
       let query = {};
 
-      if(emailParams){
-        query = {email : emailParams}
+      if (emailParams) {
+        query = { email: emailParams };
       }
       const result = await groupCollection.find(query).toArray();
       res.send(result);
@@ -49,25 +49,61 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/groups/:id", async(req, res) => {
+    app.put("/groups/:id", async (req, res) => {
       const id = req.params.id;
       const updateGroup = req.body;
-      const filter = {_id : new ObjectId(id)}
+      const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateDoc = {
-        $set : updateGroup
+        $set: updateGroup,
       };
-      const result = await groupCollection.updateOne(filter, updateDoc, options);
+      const result = await groupCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
-    })
+    });
 
-    app.delete("/groups/:id", async(req, res) => {
+    // JOIN GROUP API
+    app.put("/groups/:id/join", async (req, res) => {
+  const id = req.params.id;
+  const { email } = req.body;
+
+  const group = await groupCollection.findOne({ _id: new ObjectId(id) });
+
+  if (!group || !email || group.members?.includes(email) || group.members.length >= Number(group.maxMembers)) {
+    return res.send({
+      success: false,
+      reason: !group
+        ? "Group not found"
+        : !email
+        ? "Email is required"
+        : group.members.includes(email)
+        ? "Already a member"
+        : "Group is full",
+    });
+  }
+
+  const updateResult = await groupCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $push: { members: email } }
+  );
+
+  res.send({
+    success: true,
+    result: updateResult,
+  });
+});
+
+
+    app.delete("/groups/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
-      const result =await groupCollection.deleteOne(query);
+      const query = { _id: new ObjectId(id) };
+      const result = await groupCollection.deleteOne(query);
       console.log(result);
       res.send(result);
-    })
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
