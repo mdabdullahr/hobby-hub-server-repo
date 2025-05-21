@@ -3,13 +3,12 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 3000;
-require('dotenv').config();
+require("dotenv").config();
 
 app.use(cors());
 app.use(express.json());
 
-const uri =
-  `mongodb+srv://${process.env.USER_NAME}:${process.env.USER_PASS}@cluster0.yzsvddi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.USER_PASS}@cluster0.yzsvddi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -25,21 +24,35 @@ async function run() {
     await client.connect();
     const groupCollection = client.db("groupDB").collection("groups");
 
-    app.get("/groups", async(req, res) => {
-      const result = await groupCollection.find().toArray();
+    app.get("/groups", async (req, res) => {
+      const {emailParams} = req.query;
+      console.log(emailParams);
+      let query = {};
+
+      if(emailParams){
+        query = {email : emailParams}
+      }
+      const result = await groupCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
-    app.get("/groups/:id", async(req, res) => {
+    app.get("/groups/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id : new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await groupCollection.findOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    app.post("/groups", async(req, res) => {
+    app.post("/groups", async (req, res) => {
       const group = req.body;
       const result = await groupCollection.insertOne(group);
+      res.send(result);
+    });
+
+    app.delete("/groups/:id", async(req, res) => {
+      const id = req.params.id;
+      const query = {id: new ObjectId(id)}
+      const result =await groupCollection.deleteOne(query);
       res.send(result);
     })
 
@@ -48,7 +61,6 @@ async function run() {
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
   } finally {
-    
   }
 }
 run().catch(console.dir);
