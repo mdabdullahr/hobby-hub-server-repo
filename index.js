@@ -72,7 +72,16 @@ async function run() {
 
   const group = await groupCollection.findOne({ _id: new ObjectId(id) });
 
-  if (!group || !email || group.members?.includes(email) || group.members.length >= Number(group.maxMembers)) {
+  const now = new Date();
+  const groupStartDate = new Date(group?.startDate);
+
+  if (
+    !group ||
+    !email ||
+    group.members?.includes(email) ||
+    group.members.length >= Number(group.maxMembers) ||
+    groupStartDate < now 
+  ) {
     return res.send({
       success: false,
       reason: !group
@@ -81,6 +90,8 @@ async function run() {
         ? "Email is required"
         : group.members.includes(email)
         ? "Already a member"
+        : groupStartDate < now
+        ? "Group is no longer active"
         : "Group is full",
     });
   }
