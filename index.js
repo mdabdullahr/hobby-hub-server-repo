@@ -49,10 +49,23 @@ async function run() {
       res.send(result);
     });
 
+    app.put("/groups/:id", async(req, res) => {
+      const id = req.params.id;
+      const updateGroup = req.body;
+      const filter = {_id : new ObjectId(id)}
+      const options = { upsert: true };
+      const updateDoc = {
+        $set : updateGroup
+      };
+      const result = await groupCollection.updateOne(filter, updateDoc, options);
+      res.send(result);
+    })
+
     app.delete("/groups/:id", async(req, res) => {
       const id = req.params.id;
-      const query = {id: new ObjectId(id)}
+      const query = {_id: new ObjectId(id)}
       const result =await groupCollection.deleteOne(query);
+      console.log(result);
       res.send(result);
     })
 
