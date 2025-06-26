@@ -24,14 +24,30 @@ async function run() {
     const groupCollection = client.db("groupDB").collection("groups");
 
     app.get("/groups", async (req, res) => {
-      const { emailParams } = req.query;
-      console.log(emailParams);
-      let query = {};
+      const search = req.query.search || "";
+      const sort = req.query.sort || ""; 
+    
 
-      if (emailParams) {
-        query = { email: emailParams };
+      // Search Query
+      const query = search
+        ? {
+            $or: [
+              { title: { $regex: search, $options: "i" } },
+              { groupName: { $regex: search, $options: "i" } },
+              { location: { $regex: search, $options: "i" } },
+            ],
+          }
+        : {};
+
+      let sortOption = {};
+      if (sort === "newest") {
+        sortOption = { startDate: -1 };
+      } else if (sort === "oldest") {
+        sortOption = { startDate: 1 };
       }
-      const result = await groupCollection.find(query).toArray();
+
+      const result = await groupCollection.find(query).sort(sortOption).toArray();
+
       res.send(result);
     });
 
@@ -66,64 +82,59 @@ async function run() {
 
     // JOIN GROUP API
     app.put("/groups/:id/join", async (req, res) => {
-  const id = req.params.id;
-  const { email } = req.body;
+      const id = req.params.id;
+      const { email } = req.body;
 
-  const group = await groupCollection.findOne({ _id: new ObjectId(id) });
+      const group = await groupCollection.findOne({ _id: new ObjectId(id) });
 
-  const now = new Date();
-  const groupStartDate = new Date(group?.startDate);
+      const now = new Date();
+      const groupStartDate = new Date(group?.startDate);
 
-  if (
-    !group ||
-    !email ||
-    group.members?.includes(email) ||
-    group.members.length >= Number(group.maxMembers) ||
-    groupStartDate < now 
-  ) {
-    return res.send({
-      success: false,
-      reason: !group
-        ? "Group not found"
-        : !email
-        ? "Email is required"
-        : group.members.includes(email)
-        ? "Already a member"
-        : groupStartDate < now
-        ? "Group is no longer active"
-        : "Group is full",
+      if (
+        !group ||
+        !email ||
+        group.members?.includes(email) ||
+        group.members.length >= Number(group.maxMembers) ||
+        groupStartDate < now
+      ) {
+        return res.send({
+          success: false,
+          reason: !group
+            ? "Group not found"
+            : !email
+            ? "Email is required"
+            : group.members.includes(email)
+            ? "Already a member"
+            : groupStartDate < now
+            ? "Group is no longer active"
+            : "Group is full",
+        });
+      }
+
+      const updateResult = await groupCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $push: { members: email } }
+      );
+
+      res.send({
+        success: true,
+        result: updateResult,
+      });
     });
-  }
-
-  const updateResult = await groupCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $push: { members: email } }
-  );
-
-  res.send({
-    success: true,
-    result: updateResult,
-  });
-});
-
 
     app.delete("/groups/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await groupCollection.deleteOne(query);
-      console.log(result);
       res.send(result);
     });
-
-    
   } finally {
-    
   }
 }
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("My Assignment 11 Server site is running");
+  res.send("My Assignment 10 Server site is running");
 });
 
 app.listen(port, () => {
