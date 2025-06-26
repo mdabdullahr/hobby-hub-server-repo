@@ -23,12 +23,15 @@ async function run() {
   try {
     const groupCollection = client.db("groupDB").collection("groups");
 
+    app.get("/groupsCount", async(req, res) => {
+      const result = await groupCollection.estimatedDocumentCount();
+      res.send(result)
+    })
+
     app.get("/groups", async (req, res) => {
       const search = req.query.search || "";
       const sort = req.query.sort || ""; 
-    
-
-      // Search Query
+   
       const query = search
         ? {
             $or: [
@@ -48,6 +51,17 @@ async function run() {
 
       const result = await groupCollection.find(query).sort(sortOption).toArray();
 
+      res.send(result);
+    });
+
+    app.get("/my-groups", async (req, res) => {
+      const { emailParams } = req.query;
+      let query = {};
+
+      if (emailParams) {
+        query = { email: emailParams };
+      }
+      const result = await groupCollection.find(query).toArray();
       res.send(result);
     });
 
